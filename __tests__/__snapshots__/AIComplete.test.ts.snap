@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`AIComplete happy path 1`] = `
+{
+  "UserManagement": {
+    "description": "{{ count }} найдено",
+    "location": "Местоположение",
+    "name": "Управление пользователями",
+    "searchToolbarRenderer": {
+      "inviteLink": {
+        "label": "Пригласить ссылку",
+        "tooltip": "",
+      },
+      "locations": {
+        "label": "Местоположения",
+        "tooltip": "",
+      },
+      "roles": {
+        "label": "Роли",
+        "tooltip": "",
+      },
+    },
+    "upload": "Загрузить CSV",
+    "user": "Пользователь",
+  },
+}
+`;
