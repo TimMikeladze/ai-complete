@@ -1,6 +1,6 @@
 {
   "name": "ai-complete",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A toolkit that super-charges your workflow when working with openai.",
   "author": "Tim Mikeladze <tim.mikeladze@gmail.com>",
   "keywords": [
