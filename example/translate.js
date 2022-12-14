@@ -1,29 +1,10 @@
-# ai-complete
+/**
+ * In the following example we use `ai-complete` to translate a directory containing a bunch JSON language files. Our goal is to translate the files into another language and write the translated files to a new directory.
+ */
 
-A toolkit that super-charges your workflow when working with `openai`.
-
-## Install
-
-```bash
-npm install ai-complete
-# or
-yarn add ai-complete
-# or
-pnpm add ai-complete
-```
-
-**Note:** You will need to get an API key from [OpenAI](https://beta.openai.com/login/).
-
-## Usage
-
-In the following example we use `ai-complete` to translate a directory containing a bunch JSON language files. Our goal is to translate the files into another language and write the translated files to a new directory.
-
-> Note: You can run this example by cloning this repo and running `yarn example`.
-
-```js
 import 'dotenv/config'
 
-import AIComplete from 'ai-complete'
+import AIComplete from '../dist/index.modern.js'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 
 const inputDir = 'locales/en'
@@ -87,10 +68,3 @@ await aiComplete.aiCompleteFiles({
     }
   }
 })
-```
-
-## Running examples and tests
-
-1. Create a `.env` file in the root of the project and add your `OPENAI_API_KEY` to it.
-2. Run `yarn example` to run the `translate.js` example.
-3. Run `yarn test` to run all the tests.

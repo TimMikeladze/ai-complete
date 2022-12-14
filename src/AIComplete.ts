@@ -19,11 +19,7 @@ export interface AICompleteOptions {
 }
 
 export interface AICompleteArgs {
-  input: ({
-    args,
-    filePath,
-    fileContent
-  }: {
+  input: (args: {
     args: AICompleteArgs
     fileContent: string
     filePath: string
@@ -33,7 +29,15 @@ export interface AICompleteArgs {
     maxTokens?: number
     prompt: string
   }>
-  output: (response: CreateCompletionResponse) => Promise<{
+  output: (args: {
+    args: AICompleteArgs
+    createCompletionRequest: Partial<CreateCompletionRequest>
+    data: CreateCompletionResponse
+    fileContent: string
+    filePath: string
+    maxTokens?: number
+    prompt: string
+  }) => Promise<{
     choice: any
   }>
 }
@@ -41,8 +45,8 @@ export interface AICompleteArgs {
 export class AIComplete {
   private readonly openai: OpenAIApi
   private readonly options: AICompleteOptions
-  private readonly filePaths: string[] = []
   private static MAX_TOKENS = 4000
+  private static DEFAULT_MODEL = 'text-davinci-003'
 
   constructor(options: AICompleteOptions) {
     const configuration = new Configuration(options.openAI.config)
@@ -50,17 +54,18 @@ export class AIComplete {
     this.options = options
   }
 
-  async initialize() {
+  async aiCompleteFiles(
+    args: AICompleteArgs & {
+      options?: Options
+      patterns?: string | readonly string[]
+    }
+  ) {
     const filePaths = await globby(
-      this.options.globby.patterns,
-      this.options.globby.options
+      args.patterns || this.options.globby.patterns,
+      args.options || this.options.globby.options
     )
-    this.filePaths.push(...filePaths)
-  }
-
-  async aiCompleteFiles(args: AICompleteArgs) {
     const res = []
-    for (const filePath of this.filePaths) {
+    for (const filePath of filePaths) {
       try {
         res.push(await this.aiCompleteFile(filePath, args))
       } catch (error) {
@@ -94,8 +99,8 @@ export class AIComplete {
       )
     }
 
-    const response = await this.openai.createCompletion({
-      model: 'text-davinci-003',
+    const request: CreateCompletionRequest = {
+      model: AIComplete.DEFAULT_MODEL,
       prompt,
       temperature: 0.7,
       max_tokens: maxTokens,
@@ -104,10 +109,28 @@ export class AIComplete {
       presence_penalty: 0,
       ...this.options.openAI.createCompletionRequest,
       ...input.createCompletionRequest
+    }
+
+    const response = await this.openai.createCompletion(request)
+    const data = response.data
+
+    const output = await args.output({
+      data,
+      createCompletionRequest: request,
+      maxTokens,
+      prompt,
+      args,
+      fileContent,
+      filePath
     })
 
-    const output = await args.output(response.data)
-
-    return output.choice
+    return {
+      data,
+      input,
+      request,
+      output,
+      args,
+      filePath
+    }
   }
 }

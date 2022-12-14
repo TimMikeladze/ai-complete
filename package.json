@@ -30,7 +30,8 @@
     "test": "yarn node --experimental-vm-modules $(yarn bin jest) --coverage --passWithNoTests --forceExit",
     "prepublishOnly": "yarn lint && yarn test && yarn build",
     "release": "release-it",
-    "commit": "yarn commit-it"
+    "commit": "yarn commit-it",
+    "example": "yarn && node example/translate.js"
   },
   "release-it": {
     "git": {

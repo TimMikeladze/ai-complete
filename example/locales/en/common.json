@@ -1,0 +1,23 @@
+{
+  "UserManagement": {
+    "name": "User management",
+    "description": "{{ count }} found",
+    "user": "User",
+    "location": "Location",
+    "upload": "Upload CSV",
+    "searchToolbarRenderer": {
+      "roles": {
+        "label": "Roles",
+        "tooltip": ""
+      },
+      "locations": {
+        "label": "Locations",
+        "tooltip": ""
+      },
+      "inviteLink": {
+        "label": "Invite link",
+        "tooltip": ""
+      }
+    }
+  }
+}

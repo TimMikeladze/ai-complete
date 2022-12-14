@@ -6,3 +6,4 @@ yarn.lock
 .npmrc
 .husky/pre-commit
 .gitignore
+.env.example
