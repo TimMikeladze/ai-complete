@@ -1,0 +1,24 @@
+{
+  "CareerManagement": {
+    "name": "Career paths",
+    "description": "{{ count }} found",
+    "jobTitle": "Job title",
+    "careerPath": "Career path",
+    "jobCategory": "Job category",
+    "upload": "Upload CSV",
+    "searchToolbarRenderer": {
+      "careerPaths": {
+        "label": "Career paths",
+        "tooltip": ""
+      },
+      "jobTitles": {
+        "label": "Job titles",
+        "tooltip": ""
+      },
+      "jobCategories": {
+        "label": "Job categories",
+        "tooltip": ""
+      }
+    }
+  }
+}

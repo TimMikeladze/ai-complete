@@ -44,12 +44,12 @@ await aic.createCompletion({
     patterns: ['example/locales/en/**/*.json']
   },
   // This function is called for each file and the results are used as arguments for the OpenAI API.
-  input: async ({ args, filePath, fileContent }) => {
+  input: async () => {
     return {
       // Describe what you want to do with the file.
       prompt:
         'Translate the JSON below into Russian but keep names of all keys and metadata in English.',
-      createCompletionRequest: {
+      request: {
         // controls randomness, as value approaches 0 the output will be more deterministic
         temperature: 0
       }
@@ -87,6 +87,46 @@ await aic.createCompletion({
     }
   }
 })
+```
+
+In this example we will use `ai-complete` to load some text and ask OpenAI to create an edit.
+
+```js
+import 'dotenv/config'
+
+import AIComplete from 'ai-complete'
+
+const aic = new AIComplete({
+  openAI: {
+    config: {
+      apiKey: process.env.OPENAI_API_KEY
+    }
+  }
+})
+
+const result = await aic.createEdit({
+  data: [
+    {
+      type: 'text',
+      value: 'One, two, ___, four.'
+    }
+  ],
+  input: async () => ({
+    instruction: 'Fill in the blank with the correct word.'
+  }),
+  output: async ({ data }) => {
+    return {
+      choice: data.choices[0].text
+    }
+  }
+})
+
+// Result:
+//   [
+//      {
+//          "choice": "One, two, three, four.",
+//      }
+//   ]
 ```
 
 ## Running examples and tests

@@ -25,12 +25,12 @@ await aic.createCompletion({
     patterns: ['example/locales/en/**/*.json']
   },
   // This function is called for each file and the results are used as arguments for the OpenAI API.
-  input: async ({ args, filePath, fileContent }) => {
+  input: async () => {
     return {
       // Describe what you want to do with the file.
       prompt:
         'Translate the JSON below into Russian but keep names of all keys and metadata in English.',
-      createCompletionRequest: {
+      request: {
         // controls randomness, as value approaches 0 the output will be more deterministic
         temperature: 0
       }

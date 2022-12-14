@@ -1,27 +1,62 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`AIComplete happy path 1`] = `
-{
-  "UserManagement": {
-    "description": "{{ count }} найдено",
-    "location": "Местоположение",
-    "name": "Управление пользователями",
-    "searchToolbarRenderer": {
-      "inviteLink": {
-        "label": "Пригласить ссылку",
-        "tooltip": "",
+exports[`AIComplete createCompletion 1`] = `
+[
+  {
+    "CareerManagement": {
+      "careerPath": "Карьерный путь",
+      "description": "{{ count }} найдено",
+      "jobCategory": "Категория должности",
+      "jobTitle": "Название должности",
+      "name": "Career paths",
+      "searchToolbarRenderer": {
+        "careerPaths": {
+          "label": "Карьерные пути",
+          "tooltip": "",
+        },
+        "jobCategories": {
+          "label": "Категории должностей",
+          "tooltip": "",
+        },
+        "jobTitles": {
+          "label": "Названия должностей",
+          "tooltip": "",
+        },
       },
-      "locations": {
-        "label": "Местоположения",
-        "tooltip": "",
-      },
-      "roles": {
-        "label": "Роли",
-        "tooltip": "",
-      },
+      "upload": "Загрузить CSV",
     },
-    "upload": "Загрузить CSV",
-    "user": "Пользователь",
   },
-}
+  {
+    "UserManagement": {
+      "description": "{{ count }} найдено",
+      "location": "Местоположение",
+      "name": "Управление пользователями",
+      "searchToolbarRenderer": {
+        "inviteLink": {
+          "label": "Пригласить ссылку",
+          "tooltip": "",
+        },
+        "locations": {
+          "label": "Местоположения",
+          "tooltip": "",
+        },
+        "roles": {
+          "label": "Роли",
+          "tooltip": "",
+        },
+      },
+      "upload": "Загрузить CSV",
+      "user": "Пользователь",
+    },
+  },
+]
+`;
+
+exports[`AIComplete createEdit 1`] = `
+[
+  {
+    "choice": "One, two, three, four.
+",
+  },
+]
 `;

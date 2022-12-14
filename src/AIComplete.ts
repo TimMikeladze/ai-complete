@@ -1,4 +1,9 @@
-import { Configuration, OpenAIApi } from 'openai'
+import {
+  Configuration,
+  CreateEditRequest,
+  CreateEditResponse,
+  OpenAIApi
+} from 'openai'
 import { globbySync, Options } from 'globby'
 import { readFileSync } from 'fs'
 import {
@@ -7,7 +12,7 @@ import {
 } from 'openai/api.js'
 import { ConfigurationParameters } from 'openai/configuration.js'
 
-export interface InputItem {
+export interface DataInput {
   type: 'filepath' | 'text'
   value: string
 }
@@ -18,30 +23,81 @@ export interface AICompleteOptions {
   }
 }
 
-export interface RequestArgs {
+export type RequestArgs = {
+  data?: DataInput[]
   globby?: {
     options?: Options
     patterns: string | readonly string[]
   }
+}
+
+export interface CreateCompletionArgs {
   input: (args: {
-    args: RequestArgs
+    args: CreateCompletionArgs
     filePath: string
     text: string
   }) => Promise<{
     content?: string
-    createCompletionRequest?: Partial<CreateCompletionRequest>
     maxTokens?: number
     prompt: string
+    request?: Partial<CreateCompletionRequest>
   }>
-  inputList?: InputItem[]
   output: (args: {
     args: RequestArgs
     content: string
-    createCompletionRequest: Partial<CreateCompletionRequest>
     data: CreateCompletionResponse
     filePath: string
     maxTokens?: number
     prompt: string
+    request: Partial<CreateCompletionRequest>
+  }) => Promise<{
+    choice: any
+  }>
+}
+
+export interface CreateEditArgs {
+  input: (args: {
+    args: CreateEditArgs
+    filePath: string
+    text: string
+  }) => Promise<{
+    content?: string
+    input?: string
+    instruction: string
+    request?: CreateEditRequest
+  }>
+  output: (args: {
+    args: CreateEditArgs
+    content: string
+    data: CreateEditResponse
+    filePath: string
+    input?: string
+    instruction: string
+    request: CreateEditRequest
+  }) => Promise<{
+    choice: any
+  }>
+}
+
+export interface CreateInsertArgs {
+  input: (args: {
+    args: CreateInsertArgs
+    filePath: string
+    text: string
+  }) => Promise<{
+    content?: string
+    input?: string
+    instruction: string
+    request?: CreateEditRequest
+  }>
+  output: (args: {
+    args: CreateEditArgs
+    content: string
+    data: CreateEditResponse
+    filePath: string
+    input?: string
+    instruction: string
+    request: CreateEditRequest
   }) => Promise<{
     choice: any
   }>
@@ -51,14 +107,20 @@ export const defaultCreateCompletionRequest = {
   temperature: 0.7,
   top_p: 1,
   frequency_penalty: 0,
-  presence_penalty: 0
+  presence_penalty: 0,
+  model: 'text-davinci-003'
+}
+
+export const defaultCreateEditRequest = {
+  temperature: 0.7,
+  top_p: 1,
+  model: 'text-davinci-edit-001'
 }
 
 export class AIComplete {
   private readonly openai: OpenAIApi
   private readonly options: AICompleteOptions
   private static MAX_TOKENS = 4000
-  private static DEFAULT_MODEL = 'text-davinci-003'
 
   constructor(options: AICompleteOptions) {
     const configuration = new Configuration(options.openAI.config)
@@ -67,13 +129,13 @@ export class AIComplete {
   }
 
   private async request(args: RequestArgs & {}, fn: any) {
-    const inputList = []
+    const data = []
 
     const addGlobbyInput = (
       patterns: string | readonly string[],
       options?: Options
     ) => {
-      inputList.push(
+      data.push(
         ...globbySync(patterns, options).map((filePath) => ({
           type: 'filepath',
           value: filePath
@@ -82,14 +144,14 @@ export class AIComplete {
     }
 
     const addFileInput = (filePath: string) => {
-      inputList.push({
+      data.push({
         type: 'filepath',
         value: filePath
       })
     }
 
     const addTextInput = (text: string) => {
-      inputList.push({
+      data.push({
         type: 'text',
         value: text
       })
@@ -99,8 +161,8 @@ export class AIComplete {
       addGlobbyInput(args.globby.patterns, args.globby.options)
     }
 
-    if (args.inputList) {
-      for (const inputItem of args.inputList) {
+    if (args.data) {
+      for (const inputItem of args.data) {
         if (inputItem.type === 'filepath') {
           addFileInput(inputItem.value)
         }
@@ -122,7 +184,7 @@ export class AIComplete {
 
     const res = []
 
-    for (const inputItem of inputList) {
+    for (const inputItem of data) {
       try {
         res.push(
           await fn(
@@ -131,21 +193,35 @@ export class AIComplete {
             inputItem.type === 'filepath' ? inputItem.value : undefined
           )
         )
-      } catch (error) {
-        console.error(error)
-        res.push(null)
+      } catch (e) {
+        console.error(e)
       }
     }
 
     return res
   }
 
-  public async createCompletion(args: RequestArgs) {
+  public static getTokenCount(prompt: string, _maxTokens?: number) {
+    // count alphanumeric characters in prompt
+    const promptLength = prompt.replace(/[^a-z0-9]/gi, '').length
+
+    const maxTokens =
+      _maxTokens || Math.min(promptLength, AIComplete.MAX_TOKENS)
+
+    if (maxTokens > AIComplete.MAX_TOKENS) {
+      throw new Error(
+        `maxTokens must be less than ${AIComplete.MAX_TOKENS}. Try breaking the input into smaller chunks.`
+      )
+    }
+    return maxTokens
+  }
+
+  public async createCompletion(args: RequestArgs & CreateCompletionArgs) {
     return this.request(args, this.createCompletionFromText.bind(this))
   }
 
   public async createCompletionFromText(
-    args: RequestArgs,
+    args: RequestArgs & CreateCompletionArgs,
     text: string,
     filePath?: string
   ) {
@@ -157,24 +233,13 @@ export class AIComplete {
 
     const prompt = `${input.prompt} ${input.content || text}`.trim()
 
-    // count alphanumeric characters in prompt
-    const promptLength = prompt.replace(/[^a-z0-9]/gi, '').length
-
-    const maxTokens =
-      input.maxTokens || Math.min(promptLength, AIComplete.MAX_TOKENS)
-
-    if (maxTokens > AIComplete.MAX_TOKENS) {
-      throw new Error(
-        `maxTokens must be less than ${AIComplete.MAX_TOKENS}. Try breaking the input into smaller chunks.`
-      )
-    }
+    const maxTokens = AIComplete.getTokenCount(prompt, input.maxTokens)
 
     const request: CreateCompletionRequest = {
-      model: AIComplete.DEFAULT_MODEL,
       prompt,
       max_tokens: maxTokens,
       ...defaultCreateCompletionRequest,
-      ...input.createCompletionRequest
+      ...input.request
     }
 
     const response = await this.openai.createCompletion(request)
@@ -182,7 +247,7 @@ export class AIComplete {
 
     const output = await args.output({
       data,
-      createCompletionRequest: request,
+      request,
       maxTokens,
       prompt,
       args,
@@ -196,6 +261,56 @@ export class AIComplete {
       request,
       output,
       args,
+      filePath
+    }
+  }
+
+  public async createEdit(args: RequestArgs & CreateEditArgs) {
+    return this.request(args, this.createEditFromText.bind(this))
+  }
+
+  public async createEditFromText(
+    args: RequestArgs & CreateEditArgs,
+    text: string,
+    filePath?: string
+  ) {
+    const input = await args.input({
+      args,
+      text,
+      filePath
+    })
+
+    const content = input.content || text
+    const instruction = input.instruction
+
+    const request: CreateEditRequest = {
+      instruction,
+      input: content,
+      ...defaultCreateEditRequest,
+      ...input.request
+    }
+
+    const response = await this.openai.createEdit(request)
+    const data = response.data
+
+    const output = await args.output({
+      data,
+      request,
+      instruction,
+      input: content,
+      args,
+      content: text,
+      filePath
+    })
+
+    return {
+      output,
+      data,
+      request,
+      instruction,
+      input: content,
+      args,
+      content: text,
       filePath
     }
   }
