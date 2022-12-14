@@ -2,24 +2,23 @@ import { AIComplete } from '../src'
 
 describe('AIComplete', () => {
   it('happy path', async () => {
-    const aiComplete = new AIComplete({
-      globby: {
-        patterns: ['__tests__/happy-path/**/*']
-      },
+    const aic = new AIComplete({
       openAI: {
         config: {
           apiKey: process.env.OPENAI_API_KEY
-        },
-        createCompletionRequest: {
-          temperature: 0
         }
       }
     })
-
-    const [result] = await aiComplete.aiCompleteFiles({
-      input: async ({ args, filePath, fileContent }) => ({
+    const [result] = await aic.createCompletion({
+      globby: {
+        patterns: ['example/locales/en/**/*']
+      },
+      input: async ({ args, filePath, text }) => ({
         prompt:
-          'Translate the JSON below into Russian but keep names of all keys and metadata in English.'
+          'Translate the JSON below into Russian but keep names of all keys and metadata in English.',
+        createCompletionRequest: {
+          temperature: 0
+        }
       }),
       output: async ({ data }) => ({
         choice: JSON.parse(data.choices[0].text)

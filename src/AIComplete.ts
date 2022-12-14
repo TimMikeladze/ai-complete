@@ -1,5 +1,5 @@
 import { Configuration, OpenAIApi } from 'openai'
-import { globby, Options } from 'globby'
+import { globbySync, Options } from 'globby'
 import { readFileSync } from 'fs'
 import {
   CreateCompletionRequest,
@@ -7,39 +7,51 @@ import {
 } from 'openai/api.js'
 import { ConfigurationParameters } from 'openai/configuration.js'
 
+export interface InputItem {
+  type: 'filepath' | 'text'
+  value: string
+}
+
 export interface AICompleteOptions {
-  globby: {
-    options?: Options
-    patterns: string | readonly string[]
-  }
   openAI: {
     config: ConfigurationParameters
-    createCompletionRequest?: Partial<CreateCompletionRequest>
   }
 }
 
-export interface AICompleteArgs {
+export interface RequestArgs {
+  globby?: {
+    options?: Options
+    patterns: string | readonly string[]
+  }
   input: (args: {
-    args: AICompleteArgs
-    fileContent: string
+    args: RequestArgs
     filePath: string
+    text: string
   }) => Promise<{
+    content?: string
     createCompletionRequest?: Partial<CreateCompletionRequest>
-    fileContent?: string
     maxTokens?: number
     prompt: string
   }>
+  inputList?: InputItem[]
   output: (args: {
-    args: AICompleteArgs
+    args: RequestArgs
+    content: string
     createCompletionRequest: Partial<CreateCompletionRequest>
     data: CreateCompletionResponse
-    fileContent: string
     filePath: string
     maxTokens?: number
     prompt: string
   }) => Promise<{
     choice: any
   }>
+}
+
+export const defaultCreateCompletionRequest = {
+  temperature: 0.7,
+  top_p: 1,
+  frequency_penalty: 0,
+  presence_penalty: 0
 }
 
 export class AIComplete {
@@ -54,38 +66,96 @@ export class AIComplete {
     this.options = options
   }
 
-  async aiCompleteFiles(
-    args: AICompleteArgs & {
+  private async request(args: RequestArgs & {}, fn: any) {
+    const inputList = []
+
+    const addGlobbyInput = (
+      patterns: string | readonly string[],
       options?: Options
-      patterns?: string | readonly string[]
+    ) => {
+      inputList.push(
+        ...globbySync(patterns, options).map((filePath) => ({
+          type: 'filepath',
+          value: filePath
+        }))
+      )
     }
-  ) {
-    const filePaths = await globby(
-      args.patterns || this.options.globby.patterns,
-      args.options || this.options.globby.options
-    )
+
+    const addFileInput = (filePath: string) => {
+      inputList.push({
+        type: 'filepath',
+        value: filePath
+      })
+    }
+
+    const addTextInput = (text: string) => {
+      inputList.push({
+        type: 'text',
+        value: text
+      })
+    }
+
+    if (args.globby) {
+      addGlobbyInput(args.globby.patterns, args.globby.options)
+    }
+
+    if (args.inputList) {
+      for (const inputItem of args.inputList) {
+        if (inputItem.type === 'filepath') {
+          addFileInput(inputItem.value)
+        }
+        if (inputItem.type === 'text') {
+          addTextInput(inputItem.value)
+        }
+      }
+    }
+    const getContent = (inputItem): string => {
+      let content: string
+      if (inputItem.type === 'filepath') {
+        content = readFileSync(inputItem.value, 'utf8')
+      }
+      if (inputItem.type === 'text') {
+        content = inputItem.value
+      }
+      return content
+    }
+
     const res = []
-    for (const filePath of filePaths) {
+
+    for (const inputItem of inputList) {
       try {
-        res.push(await this.aiCompleteFile(filePath, args))
+        res.push(
+          await fn(
+            args,
+            getContent(inputItem),
+            inputItem.type === 'filepath' ? inputItem.value : undefined
+          )
+        )
       } catch (error) {
         console.error(error)
         res.push(null)
       }
     }
+
     return res
   }
 
-  async aiCompleteFile(filePath: string, args: AICompleteArgs) {
-    const fileContent = readFileSync(filePath, 'utf8')
+  public async createCompletion(args: RequestArgs) {
+    return this.request(args, this.createCompletionFromText.bind(this))
+  }
 
+  public async createCompletionFromText(
+    args: RequestArgs,
+    text: string,
+    filePath?: string
+  ) {
     const input = await args.input({
       args,
-      fileContent,
+      text,
       filePath
     })
 
-    const prompt = `${input.prompt} ${input.fileContent || fileContent}`.trim()
+    const prompt = `${input.prompt} ${input.content || text}`.trim()
 
     // count alphanumeric characters in prompt
     const promptLength = prompt.replace(/[^a-z0-9]/gi, '').length
@@ -95,19 +165,15 @@ export class AIComplete {
 
     if (maxTokens > AIComplete.MAX_TOKENS) {
       throw new Error(
-        `maxTokens must be less than ${AIComplete.MAX_TOKENS} for ${filePath}. Try breaking the file into smaller chunks.`
+        `maxTokens must be less than ${AIComplete.MAX_TOKENS}. Try breaking the input into smaller chunks.`
       )
     }
 
     const request: CreateCompletionRequest = {
       model: AIComplete.DEFAULT_MODEL,
       prompt,
-      temperature: 0.7,
       max_tokens: maxTokens,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-      ...this.options.openAI.createCompletionRequest,
+      ...defaultCreateCompletionRequest,
       ...input.createCompletionRequest
     }
 
@@ -120,7 +186,7 @@ export class AIComplete {
       maxTokens,
       prompt,
       args,
-      fileContent,
+      content: text,
       filePath
     })
 

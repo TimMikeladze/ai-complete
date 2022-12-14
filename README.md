@@ -29,20 +29,11 @@ import { existsSync, mkdirSync, writeFileSync } from 'fs'
 const inputDir = 'locales/en'
 const outputDir = 'locales/ru'
 
-const aiComplete = new AIComplete({
-  // Configure the OpenAI API. API key is required.
-  openAI: {
-    config: {
-      apiKey: process.env.OPENAI_API_KEY
-    }
-  },
+await aic.createCompletion({
   // Where to read files from. All globby pattern and options are supported.
   globby: {
     patterns: ['example/locales/en/**/*.json']
-  }
-})
-
-await aiComplete.aiCompleteFiles({
+  },
   // This function is called for each file and the results are used as arguments for the OpenAI API.
   input: async ({ args, filePath, fileContent }) => {
     return {

@@ -13,7 +13,7 @@ import { Command } from 'commander'
 
   // const translator = new AIComplete()
 
-  // await aiComplete.initialize();
+  // await aic.initialize();
 
   process.exit(0)
 })()
