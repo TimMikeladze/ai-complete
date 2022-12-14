@@ -29,6 +29,15 @@ import { existsSync, mkdirSync, writeFileSync } from 'fs'
 const inputDir = 'locales/en'
 const outputDir = 'locales/ru'
 
+const aic = new AIComplete({
+  // Configure the OpenAI API. API key is required.
+  openAI: {
+    config: {
+      apiKey: process.env.OPENAI_API_KEY
+    }
+  }
+})
+
 await aic.createCompletion({
   // Where to read files from. All globby pattern and options are supported.
   globby: {
